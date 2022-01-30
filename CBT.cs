@@ -119,24 +119,25 @@ namespace CBT
             Dictionary<int, List<int>> column_c = ConstraintC(s);
             Dictionary<int, List<int>> row_c = ConstraintR(s);
             Dictionary<int, List<int>> block_c = ConstraintB(s);
-
-            List<int> partial = new List<int>();
+           
+            List<List<int>> thrashing = new List<List<int>>();
+            List<int> partial = new List<int>(); 
 
             // gaat nog over gefixeerde waardes heen
             // kan niet verder dan 1 terug
 
             while (row <= 8 && col <= 9)
             {
-
-                List<List<int>> thrashing = new List<List<int>>();
+                List<int> part = partial;
                 List<int> no = new List<int> { 9,8,7,6,5,4,3,2,1 };
 
-                for(int i = 0; i < thrashing.Count; i++)
+                //inhoud van thrashing bekijken:
+                for(int t=0; t < thrashing.Count; t++)
                 {
-                    Console.WriteLine("## thrashlist nr. " + i);
-                    foreach (int thrashint in thrashing[i])
+                    Console.WriteLine("## thrashlist nr "+t);
+                    foreach(int thrashint in thrashing[t])
                     {
-                        Console.WriteLine("# " + thrashint);
+                        Console.WriteLine("# "+thrashint);
                     }
                 }
                 
@@ -167,7 +168,6 @@ namespace CBT
                     int col_for = col + 1;
                     int row_for = row;
 
-                    List<int> part = partial;
 
                     if (isEmpty)
                     {
@@ -179,8 +179,6 @@ namespace CBT
 
                         if (col == 0 && row != 0)
                         {
-                            part.Remove(s[row, col]);
-                            s[row, col] = 0;
                             row--;
                             col = 8;
                             Point q = new Point(col, row);
@@ -190,16 +188,11 @@ namespace CBT
                         }
                         else
                         {
-                            part.Remove(s[row, col]);
                             s[row, col] = 0;
                             col--;
                             Point p = new Point(col, row);
                             if (s.fixedlist.Contains(p) && col > 0)
                                 col--;
-                            foreach(int pa in part)
-                            {
-                                Console.WriteLine("Part nr.: "+ pa);
-                            }
                             break; 
                         }
                     }
@@ -216,28 +209,26 @@ namespace CBT
                         s[col, row] = no[j];
                         part.Add(s[col, row]);
 
+                        Console.WriteLine(no[j]);
+                        s.PrintSudoku();
+                        
                         if (thrashing.Contains(part))
                         {
-                            Console.WriteLine(no[j]);
-                            s.PrintSudoku();
                             no.Clear(); 
                         }
 
                         Point p = new Point(col_for, row_for);
                         if (s.fixedlist.Contains(p))
                             col_for++;
+                        
                         if (Forward(s, row_for, col_for))
                         {
-                            thrashing.Add(part);
-                            foreach(int pp in part)
-                            {
-                                Console.WriteLine("part nr: " + pp);
-                            }
                             col++;
                             break;
                         }
                         else
                         {
+                            thrashing.Add(new List<int>(part));
                             part.Remove(s[col,row]);
                             s[col, row] = 0;
                             no.Remove(no[j]);
@@ -246,6 +237,7 @@ namespace CBT
                     }
                     else
                         no.Remove(no[j]);
+                    
                 }
                 
 

@@ -5,35 +5,13 @@ using System.Linq;
 
 namespace CBT
 {
-    /*public static class DictionaryExtensions
-    {
-        public static void AddOrUpdate(this Dictionary<string, List<string>> targetDictionary, string key, string entry)
-        {
-            if (!targetDictionary.ContainsKey(key))
-                targetDictionary.Add(key, new List<string>());
-
-            targetDictionary[key].Add(entry);
-        }
-    }*/
-
     public class CBT
     {
 
         public static void cbt(Sudoku s)
         {
-            //Dictionary<int, List<int>> column_c = ConstraintC(s);
-            //Dictionary<int, List<int>> row_c = ConstraintR(s);
-            //Dictionary<int, List<int>> block_c = ConstraintB(s);
             s.PrintSudoku(); 
-            //foreach (var item in row_c)
-            //{
-            //    Console.WriteLine($"{item.Key}: {string.Join(", ", item.Value)}");
-            //}
-
-            //if (row_c[7].Contains(2))
-            //    Console.WriteLine("Zit erin");
             Solve(s);
-               
         }
 
         // Column constraint dictionary 
@@ -119,26 +97,47 @@ namespace CBT
             Dictionary<int, List<int>> column_c = ConstraintC(s);
             Dictionary<int, List<int>> row_c = ConstraintR(s);
             Dictionary<int, List<int>> block_c = ConstraintB(s);
+           
+            List<List<int>> thrashing = new List<List<int>>();
+            List<int> partial = new List<int>(); 
 
-            List<int> partial = new List<int>();
+            int herhalingen = 0;
 
             // gaat nog over gefixeerde waardes heen
             // kan niet verder dan 1 terug
 
             while (row <= 8 && col <= 9)
             {
-
-                List<List<int>> thrashing = new List<List<int>>();
+                List<int> part = partial;
                 List<int> no = new List<int> { 9,8,7,6,5,4,3,2,1 };
 
-                for(int i = 0; i < thrashing.Count; i++)
+                //inhoud van thrashing bekijken:
+                /*
+                for(int t=0; t < thrashing.Count; t++)
                 {
-                    Console.WriteLine("## thrashlist nr. " + i);
-                    foreach (int thrashint in thrashing[i])
+                    Console.WriteLine("## thrashlist nr "+t);
+                    foreach(int thrashint in thrashing[t])
                     {
-                        Console.WriteLine("# " + thrashint);
+                        Console.WriteLine("# "+thrashint);
+                    }
+                    if (t < 11 || t==64 || t==65)
+                    {
+                        s.PrintSudoku();
+                    }
+                    if(t>30)
+                    {
+                        Console.WriteLine("ERROR");
+                        return;
                     }
                 }
+                */
+
+                herhalingen++;
+                if (herhalingen > 200)
+                {
+                    return;
+                }
+
                 
                 if (col == 9)
                 {
@@ -167,7 +166,6 @@ namespace CBT
                     int col_for = col + 1;
                     int row_for = row;
 
-                    List<int> part = partial;
 
                     if (isEmpty)
                     {
@@ -177,10 +175,8 @@ namespace CBT
                             return;
                         }
 
-                        if (col == 0 && row != 0)
+                        if (col == 0 && row > 0)
                         {
-                            part.Remove(s[row, col]);
-                            s[row, col] = 0;
                             row--;
                             col = 8;
                             Point q = new Point(col, row);
@@ -188,23 +184,24 @@ namespace CBT
                                 col--;
                             break;
                         }
+
                         else
                         {
-                            part.Remove(s[row, col]);
-                            s[row, col] = 0;
+                            thrashing.Add(new List<int>(part));
+                            if(part.Count>0)
+                                part.RemoveAt(part.Count-1);
+                            
+                            s[col,row] = 0;
                             col--;
+                            
                             Point p = new Point(col, row);
                             if (s.fixedlist.Contains(p) && col > 0)
                                 col--;
-                            foreach(int pa in part)
-                            {
-                                Console.WriteLine("Part nr.: "+ pa);
-                            }
+                            //s.PrintSudoku();
                             break; 
                         }
                     }
                         
-
                     if (col_for==9)
                     {
                         row_for++;
@@ -215,40 +212,39 @@ namespace CBT
                     {
                         s[col, row] = no[j];
                         part.Add(s[col, row]);
-
+                        
+                        Console.WriteLine(no[j]);
+                        s.PrintSudoku();
+                        
                         if (thrashing.Contains(part))
                         {
-                            Console.WriteLine(no[j]);
-                            s.PrintSudoku();
                             no.Clear(); 
+                            Console.WriteLine("thrashing is gebruikt");
                         }
 
                         Point p = new Point(col_for, row_for);
-                        if (s.fixedlist.Contains(p))
+                        if (s.fixedlist.Contains(p) && !isEmpty)
                             col_for++;
-                        if (Forward(s, row_for, col_for))
+                        
+                        if (Forward(s, row_for, col_for) && !isEmpty)
                         {
-                            thrashing.Add(part);
-                            foreach(int pp in part)
-                            {
-                                Console.WriteLine("part nr: " + pp);
-                            }
                             col++;
                             break;
                         }
+
                         else
                         {
-                            part.Remove(s[col,row]);
+                            thrashing.Add(new List<int>(part));
+                            part.RemoveAt(part.Count - 1);
+                            
                             s[col, row] = 0;
                             no.Remove(no[j]);
                         }
-
                     }
                     else
                         no.Remove(no[j]);
                 }
                 
-
             }
 
             Console.WriteLine("Solution found");
@@ -264,214 +260,6 @@ namespace CBT
 
             return !list.Any();
         }
-
-        /*for (int i = 1; i <= 9; i++)
-                {
-                    if (Partial(s, i, row, col))
-                    {
-                        s[col, row] = i;
-                        
-
-                        int col_for = col + 1;
-                        int row_for = row; 
-                        if (col_for == 9)
-                        {
-                            row_for++;
-                            col_for = 0;
-                        }
-
-                        Point j = new Point(col_for, row_for);
-                        if (s.fixedlist.Contains(j))
-                            col_for++;
-
-                        if (Forward(s, row_for, col_for))
-                        {
-                            col++;
-                            break;
-
-                        }
-                        else
-                        {
-                            // Hier gaat het nu mis, hij moet als forward leeg is en er geen andere optie is voor het getal zelf, hem naar 0 zetten en naar het vorige getal
-                            // gaan dus uit deze loop
-                            s[col, row] = 0;
-                            no.Remove(i);
-                            
-                            if (isEmpty)
-                            {
-                                break;
-                            }
-
-                        }
-
-                    }
-                }*/
-        /*while (!Partial(s,i,row,col) && i != 9)
-        {
-            i++;
-        }
-
-        s[col, row] = i;
-
-        Console.WriteLine(i);
-        s.PrintSudoku();
-
-        int col_for = col + 1;
-        if (col_for == 9)
-        {
-            row++;
-            col_for = 0;
-            col = 0;
-        }
-
-        Point j = new Point(col_for, row);
-        if (s.fixedlist.Contains(j))
-            col_for++;
-
-        if (Forward(s,row,col_for))
-        {
-            col++;
-        }
-        else
-        {
-            Point p = new Point(col, row);
-            if (!s.fixedlist.Contains(p))
-            {
-                s[col, row] = 0;
-            }
-        }*/
-
-
-
-
-        //for (int row = 0; row <= 8; row++)
-        //{
-        //    for (int col = 0; col <= 9; col++)
-        //    {
-
-
-        //        int block = DetermineBlock(row, col);
-
-        //        for (int i = 1; i <= 9; i++)
-        //        {
-        //            if (Partial(r, c, b, i, row, col, block))
-        //            {
-        //                s[col, row] = i;
-        //                Dictionary<int, List<int>> col_up = UpdateList(c, col, i);
-        //                Dictionary<int, List<int>> row_up = UpdateList(r, row, i);
-        //                Dictionary<int, List<int>> block_up = UpdateList(b, block, i);
-        //                int col_forward = col + 1;
-        //                if (s[row, col_forward] != 0)
-        //                    col_forward++;
-        //                if (col_forward == 9)
-        //                {
-        //                    row++;
-        //                    col_forward = 0;
-        //                }
-
-        //                if (Forward(row_up, col_up, block_up, row, col_forward, row, col_forward))
-        //                {
-        //                    c = col_up;
-        //                    r = row_up;
-        //                    b = block_up;
-        //                }
-        //                else
-        //                {
-        //                    s[row, col] = 0;
-        //                    if (s[row, col - 1] != 0)
-        //                        col;
-        //                    if (col == 9)
-        //                    {
-        //                        row++;
-        //                        col = 0;
-        //                    }
-        //                }
-
-        //            }
-        //        }
-
-        //    }
-
-        //    s.PrintSudoku();
-
-        //}
-
-        /*if (row == 8 && col == 9)
-return true;
-
-if (col==9)
-{
-row++;
-col = 0;
-}
-
-if (s[row, col] != 0)
-return Solve(s, row, col + 1, r, c, b);
-*/
-
-
-        //while(row <= 8 && col <= 8)
-        //{
-        //    if (s[row, col] != 0)
-        //        col++;
-
-        //    
-        //    for(int i =1; i<= 9; i++)
-        //    {
-        //        if (Partial(r, c, b, i, row, col, block))
-        //        {
-        //            s[col, row] = i;
-        //            c = UpdateList(c, col, i);
-        //            r = UpdateList(r, row, i);
-        //            b = UpdateList(b, block, i);
-        //            col++;
-        //        }
-
-        //    }
-
-        //    if (col == 9)
-        //    {
-        //        row++;
-        //        col = 0;
-        //    }
-
-        //}
-
-        /*
-        for (int i = 1; i <= 9; i++)
-        {
-            if (Partial(r,c,b,i,row,col,block))
-            {
-
-                newsudoku[col, row] = i;
-                Console.WriteLine(newsudoku[col, row]);
-                newsudoku.PrintSudoku();
-                Dictionary<int, List<int>> col_up = UpdateList(c, col, i);
-                Dictionary<int, List<int>> row_up = UpdateList(r, row, i);
-                Dictionary<int, List<int>> block_up = UpdateList(b, block, i);
-
-                //foreach (var item in col_up)
-                //{
-                //    Console.WriteLine("Col" + $"{item.Key}: {string.Join(", ", item.Value)}");
-                //}
-
-                //foreach (var item in row_up)
-                //{
-                //    Console.WriteLine("Row" + $"{item.Key}: {string.Join(", ", item.Value)}");
-                //}
-
-                //foreach (var item in block_up)
-                //{
-                //    Console.WriteLine("Block" + $"{item.Key}: {string.Join(", ", item.Value)}");
-                //}
-
-                if (Solve(newsudoku, row, col + 1, row_up, col_up, block_up))
-                    return true;
-            }
-            s[col,row] = 0;
-        }
-        return false;
-        */
 
         //checkt de domeinen die veranderd zijn, dus de rij/kolom/blok als die nu niet leeg zijn dan is het goed. 
         static bool Forward(Sudoku s, int row, int col)

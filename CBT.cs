@@ -8,13 +8,17 @@ namespace CBT
     public class CBT
     {
 
+        //cbt is the main method that gets called in our program. 
+        //In turn, cbt calls upon our Solve-method with the starting-state sudoku (s) as argument.
         public static void cbt(Sudoku s)
         {
             s.PrintSudoku(); 
             Solve(s);
         }
 
-        // Column constraint dictionary 
+        //The following three methods fill a dictionary with constraints per column, row and block respectively:
+
+        //Constraints for columns:
         public static Dictionary<int,List<int>> ConstraintC(Sudoku s)
         {
             Dictionary<int, List<int>> c_constraint = new Dictionary<int, List<int>>();
@@ -32,7 +36,7 @@ namespace CBT
             return c_constraint;
         }
 
-        // Row constraint dictionary 
+        //Constraints for rows:
         public static Dictionary<int, List<int>> ConstraintR( Sudoku s)
         {
             Dictionary<int, List<int>> r_constraint = new Dictionary<int, List<int>>();
@@ -51,7 +55,7 @@ namespace CBT
             return r_constraint;
         }
 
-        // Block constraint dictionary
+        //Constraints for the 3x3-blocks:
         public static Dictionary<int, List<int>> ConstraintB(Sudoku s)
         {
 
@@ -76,22 +80,21 @@ namespace CBT
             return b_constraint;
         }
 
-        // Updating dictionary after assigning value
-        public static Dictionary<int, List<int>> UpdateList(Dictionary<int,List<int>> d, int key, int v)
-        {
-            d[key].Remove(v);
-            return d; 
-        }
+        ////Solve algorithm 
+        //This method doesn't yet work 100%, as indicated in our report. 
+        
+        //What it does seem to do properly: 
+        // - it is filling the sudoku,
+        // - after every "fill" (=value assignment of a certain sudoku-spot) it checks whether that move leads to a partial solution,
+        // - it keeps track of constraints using the ConstraintC-, -R and -B-methods.
 
-        public static Dictionary<int, List<int>> AddList(Dictionary<int, List<int>> d, int key, int v)
-        {
-            d[key].Add(v);
-            return d;
-        }
+        //Where it goes wrong:
+        // - it is almost able to reduce the sudoku-problem; it (partly) keeps track of unsuccessfull combinations of numbers that were filled in the sudoku, 
+        //   in the "thrashing"-list. But during the filling of the second row, it gets stuck in a loop. See our report for more details.
 
-        // Solve algorithm 
         static void Solve(Sudoku s)
         {
+            //Setting initials values and constraint-dictionaries:
             int row = 0;
             int col = 0;
             Dictionary<int, List<int>> column_c = ConstraintC(s);
@@ -99,74 +102,58 @@ namespace CBT
             Dictionary<int, List<int>> block_c = ConstraintB(s);
            
             List<List<int>> thrashing = new List<List<int>>();
-            List<int> partial = new List<int>(); 
+            List<int> between_assignment = new List<int>(); 
 
-            int herhalingen = 0;
+            //Optional: setting a maximum number of repeats to prevent endless loop:
+            int repeats = 0;
 
-            // gaat nog over gefixeerde waardes heen
-            // kan niet verder dan 1 terug
-
+            //Entering the loop that will end when it reaches the final sudoku-spot, or when it reaches an earlier break/return-statement:
             while (row <= 8 && col <= 9)
             {
-                List<int> part = partial;
-                List<int> no = new List<int> { 9,8,7,6,5,4,3,2,1 };
-
-                //inhoud van thrashing bekijken:
-                /*
-                for(int t=0; t < thrashing.Count; t++)
-                {
-                    Console.WriteLine("## thrashlist nr "+t);
-                    foreach(int thrashint in thrashing[t])
-                    {
-                        Console.WriteLine("# "+thrashint);
-                    }
-                    if (t < 11 || t==64 || t==65)
-                    {
-                        s.PrintSudoku();
-                    }
-                    if(t>30)
-                    {
-                        Console.WriteLine("ERROR");
-                        return;
-                    }
-                }
-                */
-
-                herhalingen++;
-                if (herhalingen > 200)
+                //Instantiating part as the list that will track the assignment done so far and domain as the list of possible numbers (nr's 1-9)
+                //to assign to each sudoku-spot:
+                List<int> part = between_assignment;
+                List<int> domain = new List<int> { 9,8,7,6,5,4,3,2,1 };
+                
+                //Optional max repeats:
+                repeats++;
+                if (repeats > 100)
                 {
                     return;
                 }
 
-                
+                //To check if the loop needs to go down one row:
                 if (col == 9)
                 {
                     row++;
                     col = 0;
                 }
 
+                //To check if the current sudoku-spot contains a fixed number:
                 Point pj = new Point(col, row);
-                if (s.fixedlist.Contains(pj))
+                if (s.fixedlist.Contains(pj) && !IsEmpty(domain))
                     col++;
 
+                //To check whether any assignments have been done before and if so, removing them from the no-list:
                 if (s[col, row] != 0)
                 {
-                    for (int j = no.Count - 1; j >= 0; j--)
+                    for (int j = domain.Count - 1; j >= 0; j--)
                     {
-                        if(no[j] <= s[col,row])
+                        if(domain[j] <= s[col,row])
                         {
-                            no.Remove(no[j]);
+                            domain.Remove(domain[j]);
                         }
                     }
                 }
 
-                for (int j = no.Count-1; j >= -1; j--)
+                //Entering a for-loop that will run per sudoku-spot to fill it up with a number from the domain:
+                for (int j = domain.Count-1; j >= -1; j--)
                 {
-                    bool isEmpty = IsEmpty(no);
+                    bool isEmpty = IsEmpty(domain);
                     int col_for = col + 1;
                     int row_for = row;
 
-
+                    //Check if the domain is empty or not and if so, it backtracks:
                     if (isEmpty)
                     {
                         if (col == 0 && row == 0)
@@ -175,6 +162,7 @@ namespace CBT
                             return;
                         }
 
+                        //Backtracking if it needs to go back up one row again:
                         if (col == 0 && row > 0)
                         {
                             row--;
@@ -185,19 +173,20 @@ namespace CBT
                             break;
                         }
 
+                        //Backtracking it just needs to move back left one spot;
                         else
                         {
                             thrashing.Add(new List<int>(part));
-                            if(part.Count>0)
+                            if(part.Count>0 && !Partial(s, s[col,row],row,col))
                                 part.RemoveAt(part.Count-1);
                             
                             s[col,row] = 0;
                             col--;
-                            
+
                             Point p = new Point(col, row);
                             if (s.fixedlist.Contains(p) && col > 0)
                                 col--;
-                            //s.PrintSudoku();
+                            s.PrintSudoku();
                             break; 
                         }
                     }
@@ -208,49 +197,53 @@ namespace CBT
                         col_for = 0;
                     }
 
-                    if (Partial(s, no[j], row, col))
+                    //Checking if the current value-assignment is a partial solution:
+                    if (Partial(s, domain[j], row, col))
                     {
-                        s[col, row] = no[j];
+                        s[col, row] = domain[j];
                         part.Add(s[col, row]);
                         
-                        Console.WriteLine(no[j]);
                         s.PrintSudoku();
+                        Console.WriteLine(domain[j]);
                         
+                        //This is one place where it seems to go wrong: it needs to check whether a certain "thrashing" combination has occured before and if so,
+                        //it should go backtracking again. But it doesn't do this correctly... it goes wrong somewhere with filling and updating the part/thrashing lists.
                         if (thrashing.Contains(part))
                         {
-                            no.Clear(); 
-                            Console.WriteLine("thrashing is gebruikt");
+                            domain.Clear(); 
                         }
 
+                        //Checking for a fixed number again:
                         Point p = new Point(col_for, row_for);
-                        if (s.fixedlist.Contains(p) && !isEmpty)
+                        if (s.fixedlist.Contains(p))
                             col_for++;
                         
-                        if (Forward(s, row_for, col_for) && !isEmpty)
+                        //Doing a dynamic forward check and if this check it good, it moves on:
+                        if (Forward(s, row_for, col_for))
                         {
                             col++;
                             break;
                         }
 
+                        //...and if not, it adds the current value-assignments to our thrashing list:
                         else
                         {
                             thrashing.Add(new List<int>(part));
                             part.RemoveAt(part.Count - 1);
                             
                             s[col, row] = 0;
-                            no.Remove(no[j]);
+                            domain.Remove(domain[j]);
                         }
                     }
                     else
-                        no.Remove(no[j]);
+                        domain.Remove(domain[j]);
                 }
-                
             }
-
             Console.WriteLine("Solution found");
             s.PrintSudoku();
         }
 
+        //A method for checking whether a list is empty (used to check the domains):
         public static bool IsEmpty<T>(List<T> list)
         {
             if (list == null)
@@ -261,7 +254,7 @@ namespace CBT
             return !list.Any();
         }
 
-        //checkt de domeinen die veranderd zijn, dus de rij/kolom/blok als die nu niet leeg zijn dan is het goed. 
+        //The method used for forward-checking:
         static bool Forward(Sudoku s, int row, int col)
         {
             int[] r = s.getRow(row);
@@ -277,6 +270,7 @@ namespace CBT
 
         }
 
+        //The method for checking if a current assignment is a partial solution:
         static bool Partial(Sudoku s, int value, int row, int col)
         {
             int[] r = s.getRow(row);
@@ -293,6 +287,7 @@ namespace CBT
 
         }
 
+        //The method for determining in which 3x3-block you are, based on what column and row you're in (counting from left to right, top to bottom, 9 blocks in total):
         public static int DetermineBlock(int r, int c)
         {
             // rij 0-2
